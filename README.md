@@ -1,5 +1,7 @@
 # Canvas Display — Home Assistant Integration
 
+> ⚠️ **Early Development** — This integration is under active development. Expect breaking changes between releases. Not recommended for production use.
+
 HACS integration for [Canvas Display](https://github.com/bushrangerlabs/canvas-display) — a customizable canvas-based display system for kiosk devices and single-board computers.
 
 ## Features
