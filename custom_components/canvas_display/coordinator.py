@@ -191,6 +191,7 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         session = self._get_session()
         async with session.post(
             f"{self.api_url}/api/audio/pause",
+            json={},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as resp:
             if resp.status not in (200, 204, 409):
@@ -201,6 +202,7 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         session = self._get_session()
         async with session.post(
             f"{self.api_url}/api/audio/resume",
+            json={},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as resp:
             if resp.status not in (200, 204, 409):
@@ -211,6 +213,7 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         session = self._get_session()
         async with session.post(
             f"{self.api_url}/api/audio/stop",
+            json={},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as resp:
             if resp.status not in (200, 204):
@@ -242,10 +245,10 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_screen_on(self) -> None:
         """POST /api/commands/screen_on."""
-        from .const import DOMAIN as _  # noqa: F401 — avoid circular; use session directly
         session = self._get_session()
         async with session.post(
             f"{self.api_url}/api/commands/screen_on",
+            json={},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as _resp:
             pass  # best-effort
@@ -255,6 +258,7 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         session = self._get_session()
         async with session.post(
             f"{self.api_url}/api/commands/screen_off",
+            json={},
             timeout=aiohttp.ClientTimeout(total=10),
         ) as _resp:
             pass  # best-effort
