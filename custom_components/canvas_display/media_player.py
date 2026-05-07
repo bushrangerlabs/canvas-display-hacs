@@ -217,8 +217,4 @@ class CanvasDisplayMediaPlayer(CoordinatorEntity[CanvasDisplayCoordinator], Medi
         media_content_id: str | None = None,
     ) -> BrowseMedia:
         """Delegate to HA media_source so the full Cast panel is shown."""
-        return await media_source.async_browse_media(
-            self.hass,
-            media_content_id,
-            supported_media_formats=MediaPlayerEntityFeature.PLAY_MEDIA,
-        )
+        return await media_source.async_browse_media(self.hass, media_content_id)
