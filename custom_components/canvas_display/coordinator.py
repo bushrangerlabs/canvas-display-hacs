@@ -68,6 +68,7 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "settings": settings,
             "pages": {p["id"]: p for p in pages},
             "page_names": {p["name"]: p["id"] for p in pages},
+            "audio_state": await self._fetch_audio_state(session),
         }
 
     async def async_push_page(self, page_id: str) -> None:
@@ -152,3 +153,108 @@ class CanvasDisplayCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Close the aiohttp session on unload."""
         if self._session and not self._session.closed:
             await self._session.close()
+
+    # ── Audio helpers ──────────────────────────────────────────────────────────
+
+    async def _fetch_audio_state(self, session: aiohttp.ClientSession) -> dict:
+        """Fetch current audio state from the device. Never raises."""
+        try:
+            async with session.get(
+                f"{self.api_url}/api/audio/state",
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+        except Exception:  # noqa: BLE001
+            pass
+        return {"state": "idle", "title": "", "url": "", "volume": 75, "muted": False}
+
+    async def async_audio_play(self, url: str, *, title: str | None = None, volume: int | None = None) -> None:
+        """POST /api/audio/play — start playback."""
+        session = self._get_session()
+        body: dict = {"url": url}
+        if title:
+            body["title"] = title
+        if volume is not None:
+            body["volume"] = volume
+        async with session.post(
+            f"{self.api_url}/api/audio/play",
+            json=body,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            if resp.status not in (200, 204):
+                text = await resp.text()
+                raise Exception(f"audio play failed: HTTP {resp.status} — {text}")
+
+    async def async_audio_pause(self) -> None:
+        """POST /api/audio/pause."""
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/audio/pause",
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            if resp.status not in (200, 204, 409):
+                raise Exception(f"audio pause failed: HTTP {resp.status}")
+
+    async def async_audio_resume(self) -> None:
+        """POST /api/audio/resume."""
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/audio/resume",
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            if resp.status not in (200, 204, 409):
+                raise Exception(f"audio resume failed: HTTP {resp.status}")
+
+    async def async_audio_stop(self) -> None:
+        """POST /api/audio/stop."""
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/audio/stop",
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            if resp.status not in (200, 204):
+                raise Exception(f"audio stop failed: HTTP {resp.status}")
+
+    async def async_audio_volume(self, level: int) -> None:
+        """POST /api/audio/volume — set system volume 0-100."""
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/audio/volume",
+            json={"level": level},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            if resp.status not in (200, 204):
+                raise Exception(f"audio volume failed: HTTP {resp.status}")
+
+    async def async_audio_mute(self, muted: bool) -> None:
+        """POST /api/audio/mute."""
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/audio/mute",
+            json={"muted": muted},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            if resp.status not in (200, 204):
+                raise Exception(f"audio mute failed: HTTP {resp.status}")
+
+    # ── Screen helpers ─────────────────────────────────────────────────────────
+
+    async def async_screen_on(self) -> None:
+        """POST /api/commands/screen_on."""
+        from .const import DOMAIN as _  # noqa: F401 — avoid circular; use session directly
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/commands/screen_on",
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as _resp:
+            pass  # best-effort
+
+    async def async_screen_off(self) -> None:
+        """POST /api/commands/screen_off."""
+        session = self._get_session()
+        async with session.post(
+            f"{self.api_url}/api/commands/screen_off",
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as _resp:
+            pass  # best-effort
