@@ -20,6 +20,7 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -49,35 +50,44 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Canvas Display media_player from config entry."""
-    entry_data = hass.data[DOMAIN][entry.entry_id]
-    coordinator: CanvasDisplayCoordinator = entry_data["coordinator"]
-    async_add_entities([CanvasDisplayMediaPlayer(coordinator, entry)])
+    coordinator: CanvasDisplayCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    async_add_entities([CanvasDisplayMediaPlayer(coordinator, entry.entry_id)])
 
 
 class CanvasDisplayMediaPlayer(CoordinatorEntity[CanvasDisplayCoordinator], MediaPlayerEntity):
-    """Represents a Canvas Display device as a HA media_player."""
+    """Represents a Canvas Display device as a HA media_player.
 
+    Named after the device itself (has_entity_name + name=None) so the
+    entity_id becomes media_player.<device_name>, e.g. media_player.device1.
+    """
+
+    _attr_has_entity_name = True
+    _attr_name = None  # entity IS the device → entity_id = media_player.<device_name>
     _attr_supported_features = SUPPORTED_FEATURES
     _attr_media_content_type = MediaType.MUSIC
 
     def __init__(
         self,
         coordinator: CanvasDisplayCoordinator,
-        entry: ConfigEntry,
+        entry_id: str,
     ) -> None:
         super().__init__(coordinator)
-        self._entry = entry
-        settings = (coordinator.data or {}).get("settings", {})
-        device_name = settings.get("device_name", "Canvas Display")
-        self._attr_name = f"{device_name} Audio"
-        self._attr_unique_id = f"{entry.entry_id}_media_player"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": device_name,
-            "manufacturer": "Canvas Display",
-        }
+        self._entry_id = entry_id
+        self._attr_unique_id = f"canvas_display_{entry_id}_media_player"
         # Last known volume before mute (for unmute restore)
         self._premute_volume: float | None = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        settings = (self.coordinator.data or {}).get("settings", {})
+        device_name = settings.get("device_name", "Canvas Display")
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._entry_id)},
+            name=device_name,
+            manufacturer="Canvas Display",
+            model="Kiosk",
+            configuration_url=self.coordinator.api_url,
+        )
 
     # ── State helpers ──────────────────────────────────────────────────────────
 
