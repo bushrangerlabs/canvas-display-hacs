@@ -13,6 +13,8 @@ import logging
 from typing import Any
 
 from homeassistant.components.media_player import (
+    BrowseMedia,
+    MediaClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
@@ -37,6 +39,7 @@ SUPPORTED_FEATURES = (
     | MediaPlayerEntityFeature.VOLUME_MUTE
     | MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.BROWSE_MEDIA
     | MediaPlayerEntityFeature.TURN_ON
     | MediaPlayerEntityFeature.TURN_OFF
 )
@@ -187,7 +190,7 @@ class CanvasDisplayMediaPlayer(CoordinatorEntity[CanvasDisplayCoordinator], Medi
         Works with HA TTS:
           service: tts.speak
           data:
-            media_player_entity_id: media_player.canvas_display_audio
+            media_player_entity_id: media_player.device1
             message: "Hello from Home Assistant"
         """
         title: str | None = kwargs.get("extra", {}).get("title")
@@ -196,3 +199,19 @@ class CanvasDisplayMediaPlayer(CoordinatorEntity[CanvasDisplayCoordinator], Medi
             volume = round(current * 100)
         await self.coordinator.async_audio_play(media_id, title=title, volume=volume)
         await self.coordinator.async_request_refresh()
+
+    async def async_browse_media(
+        self,
+        media_content_type: MediaType | str | None = None,
+        media_content_id: str | None = None,
+    ) -> BrowseMedia:
+        """Return a BrowseMedia root so HA shows this player in the media browser cast list."""
+        return BrowseMedia(
+            title="Canvas Display",
+            media_class=MediaClass.APP,
+            media_content_type=MediaType.APP,
+            media_content_id="canvas_display",
+            can_play=False,
+            can_expand=False,
+            children=[],
+        )
