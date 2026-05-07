@@ -12,14 +12,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from homeassistant.components import media_source
 from homeassistant.components.media_player import (
     BrowseMedia,
-    MediaClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
     MediaType,
 )
+from homeassistant.components.media_player.browse_media import async_process_play_media_url
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -197,6 +198,16 @@ class CanvasDisplayMediaPlayer(CoordinatorEntity[CanvasDisplayCoordinator], Medi
         volume: int | None = None
         if (current := self.volume_level) is not None:
             volume = round(current * 100)
+
+        # Resolve media-source:// URIs to a playable URL
+        if media_source.is_media_source_id(media_id):
+            play_item = await media_source.async_resolve_media(
+                self.hass, media_id, self.entity_id
+            )
+            media_id = async_process_play_media_url(self.hass, play_item.url)
+            if not title:
+                title = play_item.mime_type
+
         await self.coordinator.async_audio_play(media_id, title=title, volume=volume)
         await self.coordinator.async_request_refresh()
 
@@ -205,13 +216,9 @@ class CanvasDisplayMediaPlayer(CoordinatorEntity[CanvasDisplayCoordinator], Medi
         media_content_type: MediaType | str | None = None,
         media_content_id: str | None = None,
     ) -> BrowseMedia:
-        """Return a BrowseMedia root so HA shows this player in the media browser cast list."""
-        return BrowseMedia(
-            title="Canvas Display",
-            media_class=MediaClass.APP,
-            media_content_type=MediaType.APP,
-            media_content_id="canvas_display",
-            can_play=False,
-            can_expand=False,
-            children=[],
+        """Delegate to HA media_source so the full Cast panel is shown."""
+        return await media_source.async_browse_media(
+            self.hass,
+            media_content_id,
+            supported_media_formats=MediaPlayerEntityFeature.PLAY_MEDIA,
         )
